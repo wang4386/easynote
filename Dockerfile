@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine AS base
+FROM php:8.3-fpm-alpine
 
 # Install nginx and required PHP extensions
 RUN apk add --no-cache nginx \
@@ -12,10 +12,8 @@ COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY index.php config.php robots.txt .htaccess /var/www/html/
 COPY assets/ /var/www/html/assets/
 
-# Create notes directory with proper permissions
-RUN mkdir -p /var/www/html/_notes \
-    && chown -R www-data:www-data /var/www/html/_notes \
-    && chmod 755 /var/www/html/_notes
+# Create notes directory
+RUN mkdir -p /var/www/html/_notes
 
 # PHP production optimizations
 RUN { \
@@ -31,5 +29,5 @@ WORKDIR /var/www/html
 
 EXPOSE 80
 
-# Start both nginx and php-fpm
-CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+# Fix permissions on startup (handles volume mounts), then start services
+CMD ["sh", "-c", "chown -R www-data:www-data /var/www/html/_notes && php-fpm -D && nginx -g 'daemon off;'"]

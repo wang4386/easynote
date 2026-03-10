@@ -400,38 +400,95 @@ body::before {
 }
 
 /* Language Toggle Button (Editor header) */
+.lang-flag {
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    object-fit: cover;
+    display: block;
+}
+
 .btn-lang-editor {
     text-decoration: none;
 }
 
-/* API Hint */
-.home-api-hint {
+/* Hints Container */
+.home-hints-container {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 auto;
+    align-items: stretch;
+    text-align: left;
+}
+
+.hint-block {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
-    padding: 12px 20px;
+    padding: 10px 20px;
     background: var(--bg-base);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-inset);
 }
 
 .label-industrial {
+    display: inline-block;
+    width: 32px;
+    text-align: center;
     font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     color: white;
     background: var(--color-primary);
-    padding: 3px 8px;
+    padding: 3px 0;
     border-radius: 6px;
+    flex-shrink: 0;
 }
 
-.home-api-hint code {
+.label-secondary {
+    background: var(--color-text-tertiary);
+}
+
+.hint-block code {
     font-size: 12px;
     font-weight: 500;
     color: var(--color-text-secondary);
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.hint-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+/* Random Icon in Input */
+.btn-input-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-xs);
+    color: var(--color-text-tertiary);
+    font-size: 20px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    text-decoration: none;
+    transition: var(--transition);
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.btn-input-icon:hover {
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.btn-input-icon:active {
+    transform: scale(0.9);
 }
 
 /* ============================

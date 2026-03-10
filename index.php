@@ -25,6 +25,17 @@ if (!is_dir($data_dir)) {
     mkdir($data_dir, 0755, true);
 }
 
+// Handle /?random — redirect to a random note name
+if (isset($_GET['random'])) {
+    $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    $rand_name = '';
+    for ($i = 0; $i < 8; $i++) {
+        $rand_name .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    header('Location: ' . $base_url . '/' . $rand_name);
+    exit;
+}
+
 // Get note name from query
 $note = isset($_GET['note']) ? trim($_GET['note'], '/') : '';
 
@@ -428,6 +439,8 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
     $base = $base_url;
     $switch_lang = ($lang === 'zh') ? 'en' : 'zh';
     $switch_url = langSwitchUrl($switch_lang);
+    $current_lang_name = ($lang === 'zh') ? '中文' : 'EN';
+    $flag_svg = ($lang === 'zh') ? 'cn.svg' : 'us.svg';
     
     // Build JS translations object
     $js_lang_keys = ['saved','saving','error','save_failed','unknown_error','network_error',
@@ -483,8 +496,8 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
     <main class="home-container">
         <div class="home-card glass-panel">
             <a href="<?php echo htmlspecialchars($switch_url); ?>" class="btn-lang" title="<?php echo $t['lang_switch']; ?>" aria-label="<?php echo $t['lang_switch']; ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span><?php echo $t['lang_switch']; ?></span>
+                <img src="<?php echo $base; ?>/assets/svg/<?php echo $flag_svg; ?>" alt="" class="lang-flag" aria-hidden="true">
+                <span><?php echo $current_lang_name; ?></span>
             </a>
             <div class="home-icon" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
@@ -497,15 +510,22 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
                     <label for="noteNameInput" class="sr-only"><?php echo $t['label_note_name']; ?></label>
                     <span class="input-prefix"><?php echo $_SERVER['HTTP_HOST'] . $base; ?>/</span>
                     <input type="text" id="noteNameInput" class="note-name-input" placeholder="my-note" autofocus autocomplete="off" spellcheck="false" pattern="[a-zA-Z0-9_\-]+" title="<?php echo $t['input_title']; ?>">
+                    <a href="<?php echo $base; ?>/?random" class="btn-input-icon" title="<?php echo $t['random_btn']; ?>" tabindex="-1">🎲</a>
                 </div>
                 <button type="submit" class="btn-primary" id="goBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     <span><?php echo $t['open_note']; ?></span>
                 </button>
             </form>
-            <div class="home-api-hint">
-                <span class="label-industrial">API</span>
-                <code>GET /api/{note-name}</code>
+            <div class="home-hints-container">
+                <div class="hint-block">
+                    <span class="label-industrial">API</span>
+                    <code>GET /api/{note-name}</code>
+                </div>
+                <div class="hint-block">
+                    <span class="label-industrial label-secondary">TIP</span>
+                    <span class="hint-text">Ctrl+D <?php echo $t['random_tip']; ?></span>
+                </div>
             </div>
         </div>
     </main>
@@ -521,6 +541,21 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
         }
         return false;
     }
+    // Ctrl+D: change URL to /?random for bookmarking, then restore
+    (function() {
+        var origUrl = location.href;
+        var origTitle = document.title;
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+                history.replaceState(null, '', '<?php echo $base; ?>/?random');
+                document.title = '<?php echo $site_title; ?> - Random';
+                setTimeout(function() {
+                    history.replaceState(null, '', origUrl);
+                    document.title = origTitle;
+                }, 3000);
+            }
+        }, true);
+    })();
     </script>
 
     <?php else: ?>
@@ -560,7 +595,7 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
                 </button>
 
                 <a href="<?php echo htmlspecialchars($switch_url); ?>" class="btn-icon btn-lang-editor" title="<?php echo $t['lang_switch']; ?>" aria-label="<?php echo $t['lang_switch']; ?>">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <img src="<?php echo $base; ?>/assets/svg/<?php echo $flag_svg; ?>" alt="" class="lang-flag" aria-hidden="true">
                 </a>
             </div>
         </header>

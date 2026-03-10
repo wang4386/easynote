@@ -7,9 +7,11 @@ A minimalist web notepad with API access, encryption support, and Markdown rende
 - 📝 **Instant Notes** — Access any note by URL (`/my-note`)
 - 🔌 **API Access** — JSON/text API for AI and programmatic access
 - 🔒 **Encryption** — Per-note AES-256-CBC password protection
+- 👁️ **Read-Only Mode** — Share notes that anyone can read, only password holders can edit
 - 📖 **Markdown** — Toggle rendered Markdown preview
 - 💾 **Auto-Save** — Content saved 1.5s after last keystroke
 - ⌨️ **Shortcuts** — `Ctrl+S` save, `Ctrl+M` markdown, `Tab` indent
+- 🌐 **i18n** — English and Simplified Chinese, switchable via UI
 - 🎨 **Zen-iOS Hybrid UI** — Frosted glass, cold gray, tactile feedback
 - 📦 **Zero Dependencies** — No database, no CDN, all assets localized
 
@@ -109,6 +111,19 @@ Edit `config.php`:
 - Users can switch languages via the globe button (🌐) in the UI
 - Language preference is saved in a cookie for 30 days
 - You can also switch via URL parameter: `?lang=en` or `?lang=zh`
+
+### Note Protection
+
+Click the lock icon (🔒) in the editor to choose a protection mode:
+
+| Mode | Behavior |
+|------|----------|
+| **Encrypt** | Password required to view AND edit. Content is AES-256-CBC encrypted. |
+| **Read-Only** | Anyone can view. Password required to edit. Content stored as plain text. |
+
+- Read-only password is stored as a bcrypt hash in `_notes/{note}.meta`
+- Visitors see a yellow banner and a locked editor; click the banner to enter the password
+- After unlocking, the owner can edit and optionally remove the protection
 
 ## License
 

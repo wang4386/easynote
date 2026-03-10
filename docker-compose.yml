@@ -1,0 +1,13 @@
+services:
+  easynote:
+    image: ghcr.io/wang4386/easynote:latest
+    container_name: easynote
+    ports:
+      - "9933:80"
+    volumes:
+      - ./data:/var/www/html/_notes
+    environment:
+      - EASYNOTE_TITLE=EasyNote
+      - EASYNOTE_LANG=zh
+      - EASYNOTE_API=true
+    restart: unless-stopped

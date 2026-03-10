@@ -19,8 +19,37 @@
 
 - PHP 7.4+ 且启用 OpenSSL 扩展
 - Apache 启用 `mod_rewrite` **或** Nginx
+- **或** Docker（推荐）
 
-## 安装部署
+## Docker 部署
+
+### 快速启动
+
+```bash
+docker run -d --name easynote \
+  -p 9933:80 \
+  -v $(pwd)/data:/var/www/html/_notes \
+  ghcr.io/wang4386/easynote:latest
+```
+
+### Docker Compose
+
+```bash
+curl -O https://raw.githubusercontent.com/wang4386/easynote/main/docker-compose.yml
+docker compose up -d
+```
+
+默认端口：`9933`。笔记数据持久化在 `./data/` 目录。
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `EASYNOTE_TITLE` | `EasyNote` | 站点标题 |
+| `EASYNOTE_LANG` | `zh` | 默认语言（`en` / `zh`） |
+| `EASYNOTE_API` | `true` | 启用/禁用 API 访问 |
+
+## 手动安装
 
 1. 将文件克隆或复制到 Web 服务器目录
 2. 确保 `_notes/` 目录可写：`chmod 755 _notes/`

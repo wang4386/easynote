@@ -19,8 +19,37 @@ A minimalist web notepad with API access, encryption support, and Markdown rende
 
 - PHP 7.4+ with OpenSSL extension
 - Apache with `mod_rewrite` **or** Nginx
+- **Or** Docker (recommended)
 
-## Installation
+## Docker Deployment
+
+### Quick Start
+
+```bash
+docker run -d --name easynote \
+  -p 9933:80 \
+  -v $(pwd)/data:/var/www/html/_notes \
+  ghcr.io/wang4386/easynote:latest
+```
+
+### Docker Compose
+
+```bash
+curl -O https://raw.githubusercontent.com/wang4386/easynote/main/docker-compose.yml
+docker compose up -d
+```
+
+Default port: `9933`. Notes are persisted in `./data/`.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EASYNOTE_TITLE` | `EasyNote` | Site title |
+| `EASYNOTE_LANG` | `zh` | Default language (`en` / `zh`) |
+| `EASYNOTE_API` | `true` | Enable/disable API access |
+
+## Manual Installation
 
 1. Clone or copy files to your web server directory
 2. Ensure `_notes/` directory is writable: `chmod 755 _notes/`

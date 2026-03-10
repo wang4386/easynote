@@ -383,12 +383,13 @@ function renderPage($note, $content, $encrypted, $is_home) {
     @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url('<?php echo $base; ?>/assets/fonts/Inter-Bold.ttf') format('truetype')}
     :root{--bg-base:#F2F2F7;--bg-white:rgba(255,255,255,0.55);--border-inner:rgba(255,255,255,0.6);--border-outer:rgba(229,229,234,0.4);--shadow-float:0 24px 48px -12px rgba(0,0,0,0.08);--color-text:#1C1C1E;--color-text-secondary:#636366;--color-text-tertiary:#8E8E93;--font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    html{font-size:16px}body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--color-text);min-height:100vh;line-height:1.6;overflow-x:hidden}
-    .home-container{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+    html{font-size:16px;height:100%;height:100dvh}body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--color-text);height:100%;line-height:1.6;overflow:hidden}
+    .home-container{display:flex;align-items:center;justify-content:center;height:100%;padding:24px;overflow:hidden}
     .glass-panel{background:var(--bg-white);backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);border:1px solid var(--border-inner);box-shadow:var(--shadow-float),inset 0 1px 0 rgba(255,255,255,0.5);position:relative}
     .home-card{width:100%;max-width:520px;padding:48px 40px;border-radius:50px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both;position:relative}
     @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
-    .note-container{display:flex;flex-direction:column;min-height:100vh;padding:16px;gap:12px;max-width:960px;margin:0 auto}
+    .note-container{display:flex;flex-direction:column;height:100%;padding:16px;gap:12px;max-width:960px;margin:0 auto;overflow:hidden}
+    .editor-wrapper{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     </style>
     <!-- Async load full stylesheet -->

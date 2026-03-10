@@ -32,6 +32,15 @@ docker run -d --name easynote \
   ghcr.io/wang4386/easynote:latest
 ```
 
+Or use Docker Hub mirror:
+
+```bash
+docker run -d --name easynote \
+  -p 9933:80 \
+  -v $(pwd)/data:/var/www/html/_notes \
+  qninq/easynote:latest
+```
+
 ### Docker Compose
 
 ```bash

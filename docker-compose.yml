@@ -1,5 +1,8 @@
 services:
   easynote:
+    # Available images (choose one):
+    #   ghcr.io/wang4386/easynote:latest
+    #   qninq/easynote:latest
     image: ghcr.io/wang4386/easynote:latest
     container_name: easynote
     ports:

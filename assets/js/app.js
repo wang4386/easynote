@@ -1,6 +1,6 @@
 /**
  * EasyNote - Frontend Application
- * Auto-save, encryption, markdown toggle, keyboard shortcuts
+ * Auto-save, encryption, read-only mode, markdown toggle, keyboard shortcuts
  * Uses window.LANG for i18n translations
  */
 (function () {
@@ -15,6 +15,9 @@
         noteName: '',
         baseUrl: '',
         isEncrypted: false,
+        isReadonly: false,
+        readonlyUnlocked: false,
+        readonlyPassword: null,
         password: null,
         markdownMode: false,
         saveTimer: null,
@@ -27,12 +30,14 @@
     var $modalOverlay, $modalTitle, $modalDesc, $passwordInput, $modalConfirm, $modalCancel;
     var $toast;
     var $iconLock, $iconUnlock;
+    var $readonlyBanner;
 
     // === Initialize ===
     function init() {
         state.noteName = document.getElementById('noteName').value;
         state.baseUrl = document.getElementById('baseUrl').value;
         state.isEncrypted = document.getElementById('isEncrypted').value === '1';
+        state.isReadonly = document.getElementById('isReadonly').value === '1';
 
         $editor = document.getElementById('editor');
         $preview = document.getElementById('markdownPreview');
@@ -49,21 +54,24 @@
         $toast = document.getElementById('toast');
         $iconLock = $btnLock.querySelector('.icon-lock');
         $iconUnlock = $btnLock.querySelector('.icon-unlock');
+        $readonlyBanner = document.getElementById('readonlyBanner');
 
         // Track initial content
         state.lastSavedContent = $editor.value;
 
-        // If encrypted, show password prompt
+        // Handle initial states
         if (state.isEncrypted) {
             updateLockIcon(true);
             showDecryptPrompt();
+        } else if (state.isReadonly) {
+            updateLockIcon(true);
         }
 
         // Bind events
         bindEvents();
 
         // Set initial status
-        if ($editor.value.length > 0) {
+        if (!state.isReadonly && !state.isEncrypted && $editor.value.length > 0) {
             setStatus('saved', t('saved'));
         }
     }
@@ -120,6 +128,14 @@
         $passwordInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') $modalConfirm.click();
         });
+
+        // Read-only banner click
+        if ($readonlyBanner) {
+            $readonlyBanner.style.cursor = 'pointer';
+            $readonlyBanner.addEventListener('click', function () {
+                showReadonlyUnlockPrompt();
+            });
+        }
     }
 
     // === Auto-Save ===
@@ -141,12 +157,21 @@
         if (content === state.lastSavedContent && !state.isEncrypted) return;
         if (state.saving) return;
 
+        // Block save for readonly (not unlocked)
+        if (state.isReadonly && !state.readonlyUnlocked) {
+            showToast(t('readonly_save_blocked'));
+            return;
+        }
+
         state.saving = true;
         setStatus('saving', t('saving'));
 
         var body = { action: 'save', content: content };
         if (state.password) {
             body.password = state.password;
+        }
+        if (state.readonlyUnlocked && state.readonlyPassword) {
+            body.readonly_password = state.readonlyPassword;
         }
 
         fetch(state.baseUrl + '/' + state.noteName, {
@@ -160,6 +185,9 @@
                 if (data.status === 'ok') {
                     state.lastSavedContent = content;
                     setStatus('saved', t('saved'));
+                } else if (data.error === 'readonly') {
+                    setStatus('error', t('error'));
+                    showToast(t('readonly_save_blocked'));
                 } else {
                     setStatus('error', t('error'));
                     showToast(t('save_failed') + (data.error || t('unknown_error')));
@@ -184,7 +212,6 @@
         $btnMarkdown.classList.toggle('active', state.markdownMode);
 
         if (state.markdownMode) {
-            // Show preview
             if (typeof marked !== 'undefined') {
                 $preview.innerHTML = marked.parse($editor.value);
             } else {
@@ -193,17 +220,16 @@
             $editor.style.display = 'none';
             $preview.style.display = 'block';
         } else {
-            // Show editor
             $editor.style.display = 'block';
             $preview.style.display = 'none';
             $editor.focus();
         }
     }
 
-    // === Lock / Encryption ===
+    // === Lock / Protection ===
     function handleLockClick() {
         if (state.isEncrypted && state.password) {
-            // Already encrypted and unlocked - offer to remove encryption
+            // Encrypted and unlocked — remove encryption
             showModal(
                 t('remove_encrypt'),
                 t('remove_encrypt_desc'),
@@ -215,29 +241,204 @@
                     forceSave();
                     showToast(t('encrypt_removed'));
                 },
-                true // no password needed
+                true
             );
-        } else if (!state.isEncrypted) {
-            // Set new password
+        } else if (state.isReadonly && state.readonlyUnlocked) {
+            // Read-only and unlocked — remove readonly
             showModal(
-                t('set_password'),
-                t('set_password_desc'),
+                t('remove_readonly'),
+                t('remove_readonly_desc'),
                 function (pwd) {
-                    if (!pwd) {
-                        showToast(t('pwd_empty'));
-                        return;
-                    }
-                    state.password = pwd;
-                    state.isEncrypted = true;
-                    updateLockIcon(true);
-                    closeModal();
-                    forceSave();
-                    showToast(t('note_encrypted'));
-                }
+                    removeReadonly();
+                },
+                true
             );
+        } else if (state.isReadonly && !state.readonlyUnlocked) {
+            // Read-only and locked — unlock prompt
+            showReadonlyUnlockPrompt();
+        } else if (!state.isEncrypted && !state.isReadonly) {
+            // Unprotected — show protection choice
+            showProtectionChoice();
         }
     }
 
+    // === Protection Choice Modal ===
+    function showProtectionChoice() {
+        $modalTitle.textContent = t('choose_protection');
+        $modalDesc.textContent = t('choose_protection_desc');
+        $passwordInput.style.display = 'none';
+
+        // Create choice buttons
+        var choiceHtml = '<div class="protection-choices">' +
+            '<button class="protection-choice-btn" id="choiceEncrypt">' +
+            '<span class="choice-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>' +
+            '<span class="choice-title">' + t('choice_encrypt') + '</span>' +
+            '<span class="choice-desc">' + t('choice_encrypt_desc') + '</span>' +
+            '</button>' +
+            '<button class="protection-choice-btn" id="choiceReadonly">' +
+            '<span class="choice-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>' +
+            '<span class="choice-title">' + t('choice_readonly') + '</span>' +
+            '<span class="choice-desc">' + t('choice_readonly_desc') + '</span>' +
+            '</button>' +
+            '</div>';
+
+        $modalDesc.innerHTML = t('choose_protection_desc') + choiceHtml;
+
+        // Hide default actions
+        document.querySelector('.modal-actions').style.display = 'none';
+        $modalOverlay.style.display = 'flex';
+
+        // Bind choice buttons
+        setTimeout(function () {
+            var $choiceEncrypt = document.getElementById('choiceEncrypt');
+            var $choiceReadonly = document.getElementById('choiceReadonly');
+            if ($choiceEncrypt) {
+                $choiceEncrypt.addEventListener('click', function () {
+                    document.querySelector('.modal-actions').style.display = '';
+                    showSetEncryptPassword();
+                });
+            }
+            if ($choiceReadonly) {
+                $choiceReadonly.addEventListener('click', function () {
+                    document.querySelector('.modal-actions').style.display = '';
+                    showSetReadonlyPassword();
+                });
+            }
+        }, 50);
+    }
+
+    function showSetEncryptPassword() {
+        showModal(
+            t('set_password'),
+            t('set_password_desc'),
+            function (pwd) {
+                if (!pwd) {
+                    showToast(t('pwd_empty'));
+                    return;
+                }
+                state.password = pwd;
+                state.isEncrypted = true;
+                updateLockIcon(true);
+                closeModal();
+                forceSave();
+                showToast(t('note_encrypted'));
+            }
+        );
+    }
+
+    function showSetReadonlyPassword() {
+        showModal(
+            t('set_readonly'),
+            t('set_readonly_desc'),
+            function (pwd) {
+                if (!pwd) {
+                    showToast(t('pwd_empty'));
+                    return;
+                }
+                setReadonly(pwd);
+            }
+        );
+    }
+
+    // === Read-Only Functions ===
+    function setReadonly(password) {
+        fetch(state.baseUrl + '/' + state.noteName, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'set_readonly', password: password })
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.status === 'ok') {
+                    state.isReadonly = true;
+                    state.readonlyUnlocked = true;
+                    state.readonlyPassword = password;
+                    updateLockIcon(true);
+                    closeModal();
+                    showToast(t('readonly_set'));
+                    // Don't disable editor since owner just set it
+                } else {
+                    showToast(t('save_failed') + (data.error || t('unknown_error')));
+                }
+            })
+            .catch(function () {
+                showToast(t('network_error'));
+            });
+    }
+
+    function showReadonlyUnlockPrompt() {
+        showModal(
+            t('unlock_readonly'),
+            t('unlock_readonly_desc'),
+            function (pwd) {
+                if (!pwd) {
+                    showToast(t('pwd_empty'));
+                    return;
+                }
+                verifyReadonly(pwd);
+            }
+        );
+    }
+
+    function verifyReadonly(password) {
+        fetch(state.baseUrl + '/' + state.noteName, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify_readonly', password: password })
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.verified) {
+                    state.readonlyUnlocked = true;
+                    state.readonlyPassword = password;
+                    $editor.removeAttribute('readonly');
+                    if ($readonlyBanner) {
+                        $readonlyBanner.style.display = 'none';
+                    }
+                    closeModal();
+                    setStatus('saved', t('saved'));
+                    showToast(t('readonly_unlocked'));
+                    $editor.focus();
+                } else {
+                    showToast(t('pwd_invalid'));
+                    $passwordInput.value = '';
+                    $passwordInput.focus();
+                }
+            })
+            .catch(function () {
+                showToast(t('network_error'));
+            });
+    }
+
+    function removeReadonly() {
+        fetch(state.baseUrl + '/' + state.noteName, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove_readonly', password: state.readonlyPassword })
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.status === 'ok') {
+                    state.isReadonly = false;
+                    state.readonlyUnlocked = false;
+                    state.readonlyPassword = null;
+                    updateLockIcon(false);
+                    $editor.removeAttribute('readonly');
+                    if ($readonlyBanner) {
+                        $readonlyBanner.style.display = 'none';
+                    }
+                    closeModal();
+                    showToast(t('readonly_removed'));
+                } else {
+                    showToast(t('pwd_invalid'));
+                }
+            })
+            .catch(function () {
+                showToast(t('network_error'));
+            });
+    }
+
+    // === Encryption ===
     function showDecryptPrompt() {
         $editor.disabled = true;
         $editor.value = '';
@@ -251,7 +452,6 @@
                     showToast(t('pwd_empty'));
                     return;
                 }
-                // Try to decrypt
                 fetch(state.baseUrl + '/' + state.noteName, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -296,6 +496,7 @@
         $modalTitle.textContent = title;
         $modalDesc.textContent = desc;
         $passwordInput.value = '';
+        document.querySelector('.modal-actions').style.display = '';
 
         if (noPassword) {
             $passwordInput.style.display = 'none';
@@ -317,11 +518,12 @@
 
     function closeModal() {
         $modalOverlay.style.display = 'none';
+        document.querySelector('.modal-actions').style.display = '';
     }
 
     // === Copy URL ===
     function copyNoteUrl() {
-        var url = window.location.href;
+        var url = window.location.origin + window.location.pathname;
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(function () {

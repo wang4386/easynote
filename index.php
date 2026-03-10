@@ -52,6 +52,7 @@ if (empty($note)) {
 
 // Note file path
 $note_file = $data_dir . $note . '.txt';
+$meta_file = $data_dir . $note . '.meta';
 
 // Handle API requests
 if ($is_api) {
@@ -61,25 +62,25 @@ if ($is_api) {
         echo json_encode(['error' => 'API access is disabled'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    handleApiRequest($note, $note_file);
+    handleApiRequest($note, $note_file, $meta_file);
     exit;
 }
 
 // Handle AJAX save (POST with JSON body)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    handleSaveRequest($note, $note_file);
+    handleSaveRequest($note, $note_file, $meta_file);
     exit;
 }
 
 // Handle note page (GET)
-showNotePage($note, $note_file);
+showNotePage($note, $note_file, $meta_file);
 
 // ========== Functions ==========
 
 /**
  * Handle API requests for AI/programmatic access
  */
-function handleApiRequest($note, $note_file) {
+function handleApiRequest($note, $note_file, $meta_file) {
     global $cipher;
     
     // CORS headers for API
@@ -196,7 +197,7 @@ function handleApiRequest($note, $note_file) {
 /**
  * Handle AJAX save request from frontend
  */
-function handleSaveRequest($note, $note_file) {
+function handleSaveRequest($note, $note_file, $meta_file) {
     global $cipher;
     
     $input = file_get_contents('php://input');
@@ -214,6 +215,16 @@ function handleSaveRequest($note, $note_file) {
     
     switch ($action) {
         case 'save':
+            // Block save if note is read-only and no readonly_password provided
+            $meta = getNoteMeta($meta_file);
+            if (!empty($meta['readonly'])) {
+                $roPwd = isset($json['readonly_password']) ? $json['readonly_password'] : '';
+                if (empty($roPwd) || !password_verify($roPwd, $meta['password_hash'])) {
+                    http_response_code(403);
+                    echo json_encode(['error' => 'readonly'], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
+            }
             $content = isset($json['content']) ? $json['content'] : '';
             $password = isset($json['password']) ? $json['password'] : '';
             
@@ -265,6 +276,44 @@ function handleSaveRequest($note, $note_file) {
             }
             break;
             
+        case 'set_readonly':
+            $password = isset($json['password']) ? $json['password'] : '';
+            if (empty($password)) {
+                echo json_encode(['error' => 'Password required'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            saveNoteMeta($meta_file, ['readonly' => true, 'password_hash' => $hash]);
+            echo json_encode(['status' => 'ok', 'readonly' => true], JSON_UNESCAPED_UNICODE);
+            break;
+            
+        case 'verify_readonly':
+            $password = isset($json['password']) ? $json['password'] : '';
+            $meta = getNoteMeta($meta_file);
+            if (empty($meta['readonly'])) {
+                echo json_encode(['status' => 'ok', 'readonly' => false], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            if (password_verify($password, $meta['password_hash'])) {
+                echo json_encode(['status' => 'ok', 'verified' => true], JSON_UNESCAPED_UNICODE);
+            } else {
+                http_response_code(403);
+                echo json_encode(['error' => 'Invalid password'], JSON_UNESCAPED_UNICODE);
+            }
+            break;
+            
+        case 'remove_readonly':
+            $password = isset($json['password']) ? $json['password'] : '';
+            $meta = getNoteMeta($meta_file);
+            if (!empty($meta['readonly']) && password_verify($password, $meta['password_hash'])) {
+                @unlink($meta_file);
+                echo json_encode(['status' => 'ok', 'readonly' => false], JSON_UNESCAPED_UNICODE);
+            } else {
+                http_response_code(403);
+                echo json_encode(['error' => 'Invalid password'], JSON_UNESCAPED_UNICODE);
+            }
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode(['error' => 'Unknown action'], JSON_UNESCAPED_UNICODE);
@@ -307,6 +356,24 @@ function isEncrypted($content) {
 }
 
 /**
+ * Get note metadata (readonly settings)
+ */
+function getNoteMeta($meta_file) {
+    if (file_exists($meta_file)) {
+        $data = json_decode(file_get_contents($meta_file), true);
+        if ($data) return $data;
+    }
+    return [];
+}
+
+/**
+ * Save note metadata
+ */
+function saveNoteMeta($meta_file, $data) {
+    file_put_contents($meta_file, json_encode($data, JSON_PRETTY_PRINT));
+}
+
+/**
  * Show the home page
  */
 function showHomePage() {
@@ -317,9 +384,10 @@ function showHomePage() {
 /**
  * Show the note editor page
  */
-function showNotePage($note, $note_file) {
+function showNotePage($note, $note_file, $meta_file) {
     $content = '';
     $encrypted = false;
+    $readonly = false;
     
     if (file_exists($note_file)) {
         $raw = file_get_contents($note_file);
@@ -329,7 +397,13 @@ function showNotePage($note, $note_file) {
         }
     }
     
-    renderPage($note, $content, $encrypted, false);
+    // Check for read-only mode
+    $meta = getNoteMeta($meta_file);
+    if (!empty($meta['readonly'])) {
+        $readonly = true;
+    }
+    
+    renderPage($note, $content, $encrypted, false, $readonly);
 }
 
 /**
@@ -345,7 +419,7 @@ function langSwitchUrl($target_lang) {
 /**
  * Render the HTML page
  */
-function renderPage($note, $content, $encrypted, $is_home) {
+function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
     global $site_title, $base_url, $t, $lang;
     
     $page_title = $is_home ? $site_title : htmlspecialchars($note) . ' - ' . $site_title;
@@ -360,7 +434,13 @@ function renderPage($note, $content, $encrypted, $is_home) {
                      'url_copied','copy_failed','pwd_empty','pwd_invalid','encrypt_removed',
                      'note_encrypted','md_not_loaded','set_password','set_password_desc',
                      'unlock_note','unlock_desc','remove_encrypt','remove_encrypt_desc',
-                     'placeholder','placeholder_encrypted','enter_password'];
+                     'placeholder','placeholder_encrypted','enter_password',
+                     'choose_protection','choose_protection_desc',
+                     'choice_encrypt','choice_encrypt_desc','choice_readonly','choice_readonly_desc',
+                     'set_readonly','set_readonly_desc','unlock_readonly','unlock_readonly_desc',
+                     'remove_readonly','remove_readonly_desc','readonly_banner',
+                     'readonly_set','readonly_unlocked','readonly_removed','readonly_save_blocked',
+                     'cancel','confirm'];
     $js_translations = [];
     foreach ($js_lang_keys as $key) {
         $js_translations[$key] = $t[$key];
@@ -447,6 +527,7 @@ function renderPage($note, $content, $encrypted, $is_home) {
     <!-- Note Editor Page -->
     <input type="hidden" id="noteName" value="<?php echo $note_escaped; ?>">
     <input type="hidden" id="isEncrypted" value="<?php echo $encrypted ? '1' : '0'; ?>">
+    <input type="hidden" id="isReadonly" value="<?php echo $readonly ? '1' : '0'; ?>">
     <input type="hidden" id="baseUrl" value="<?php echo $base; ?>">
     <script>var LANG = <?php echo json_encode($js_translations, JSON_UNESCAPED_UNICODE); ?>;</script>
     
@@ -484,10 +565,18 @@ function renderPage($note, $content, $encrypted, $is_home) {
             </div>
         </header>
         
+        <?php if ($readonly): ?>
+        <!-- Read-only Banner -->
+        <div class="readonly-banner" id="readonlyBanner">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span><?php echo $t['readonly_banner']; ?></span>
+        </div>
+        <?php endif; ?>
+        
         <!-- Editor Area -->
         <div class="editor-wrapper glass-panel">
             <label for="editor" class="sr-only"><?php echo $t['label_editor']; ?></label>
-            <textarea id="editor" class="editor" placeholder="<?php echo $t['placeholder']; ?>" spellcheck="false"><?php echo $content_escaped; ?></textarea>
+            <textarea id="editor" class="editor" placeholder="<?php echo $t['placeholder']; ?>" spellcheck="false"<?php if ($readonly) echo ' readonly'; ?>><?php echo $content_escaped; ?></textarea>
             <div id="markdownPreview" class="markdown-preview" style="display:none"></div>
         </div>
     </main>

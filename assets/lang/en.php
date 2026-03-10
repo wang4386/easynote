@@ -20,14 +20,22 @@ return [
     // Editor page
     'btn_home'         => 'Back to home',
     'btn_markdown'     => 'Toggle Markdown Preview',
-    'btn_lock'         => 'Encryption Settings',
+    'btn_lock'         => 'Protection Settings',
     'btn_copy'         => 'Copy Note URL',
     'label_editor'     => 'Note content',
     'label_password'   => 'Password',
     'placeholder'      => 'Start typing your note...',
     'placeholder_encrypted' => 'This note is encrypted. Enter password to unlock...',
 
-    // Modal
+    // Protection choice modal
+    'choose_protection'      => 'Protect Note',
+    'choose_protection_desc' => 'Choose how to protect this note:',
+    'choice_encrypt'         => 'Encrypt',
+    'choice_encrypt_desc'    => 'Password to view & edit',
+    'choice_readonly'        => 'Read-Only',
+    'choice_readonly_desc'   => 'Anyone reads, password to edit',
+
+    // Modal — encryption
     'set_password'     => 'Set Password',
     'set_password_desc'=> 'Encrypt this note with a password. Anyone will need the password to view or edit.',
     'unlock_note'      => 'Unlock Note',
@@ -37,6 +45,17 @@ return [
     'enter_password'   => 'Enter password',
     'cancel'           => 'Cancel',
     'confirm'          => 'Confirm',
+
+    // Modal — read-only
+    'set_readonly'         => 'Set Read-Only Password',
+    'set_readonly_desc'    => 'Anyone can view this note, but only the password holder can edit.',
+    'unlock_readonly'      => 'Unlock Editing',
+    'unlock_readonly_desc' => 'Enter the password to unlock editing.',
+    'remove_readonly'      => 'Remove Read-Only',
+    'remove_readonly_desc' => 'Remove read-only protection? Anyone will be able to edit.',
+
+    // Read-only banner
+    'readonly_banner'  => 'Read-only — enter password to edit',
 
     // Status & toast
     'saved'            => 'Saved',
@@ -51,5 +70,9 @@ return [
     'pwd_invalid'      => 'Invalid password',
     'encrypt_removed'  => 'Encryption removed',
     'note_encrypted'   => 'Note encrypted',
+    'readonly_set'     => 'Read-only mode enabled',
+    'readonly_unlocked'=> 'Editing unlocked',
+    'readonly_removed' => 'Read-only protection removed',
+    'readonly_save_blocked' => 'This note is read-only',
     'md_not_loaded'    => 'Markdown library not loaded.',
 ];

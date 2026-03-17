@@ -29,9 +29,13 @@ if (!is_dir($data_dir)) {
 if (isset($_GET['random'])) {
     $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     $rand_name = '';
-    for ($i = 0; $i < 8; $i++) {
-        $rand_name .= $chars[random_int(0, strlen($chars) - 1)];
-    }
+    do {
+        $rand_name = '';
+        for ($i = 0; $i < 8; $i++) {
+            $rand_name .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+    } while (file_exists($data_dir . $rand_name . '.txt'));
+    
     header('Location: ' . $base_url . '/' . $rand_name);
     exit;
 }
@@ -465,6 +469,11 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="<?php echo htmlspecialchars($t['meta_description']); ?>">
+    <?php if ($is_home): ?>
+    <meta name="robots" content="index, follow">
+    <?php else: ?>
+    <meta name="robots" content="noindex, nofollow">
+    <?php endif; ?>
     <meta name="theme-color" content="#F2F2F7">
     <title><?php echo $page_title; ?></title>
     <!-- Preload critical fonts -->
@@ -484,13 +493,24 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false) {
     .note-container{display:flex;flex-direction:column;height:100%;padding:16px;gap:12px;max-width:960px;margin:0 auto;overflow:hidden}
     .editor-wrapper{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .lang-flag{width:20px;height:14px;border-radius:2px;object-fit:cover;display:block}
+    #globalLoader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-base);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease,visibility .4s ease}
+    #globalLoader.hidden{opacity:0;visibility:hidden}
+    .spinner{width:40px;height:40px;border:3px solid rgba(0,0,0,0.1);border-top-color:var(--color-text-secondary);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    body.is-loading {overflow: hidden;}
     </style>
-    <!-- Async load full stylesheet -->
-    <link rel="preload" href="<?php echo $base; ?>/assets/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <!-- Async load full stylesheet to improve lighthouse score -->
+    <link rel="preload" href="<?php echo $base; ?>/assets/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet';document.getElementById('globalLoader').classList.add('hidden');document.body.classList.remove('is-loading');">
     <noscript><link rel="stylesheet" href="<?php echo $base; ?>/assets/css/style.css"></noscript>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
 </head>
-<body>
+<body class="is-loading">
+    <!-- Global Loader -->
+    <div id="globalLoader">
+        <div class="spinner"></div>
+    </div>
+    
     <?php if ($is_home): ?>
     <!-- Home Page -->
     <main class="home-container">

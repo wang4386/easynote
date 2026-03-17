@@ -213,7 +213,7 @@
 
         if (state.markdownMode) {
             if (typeof marked !== 'undefined') {
-                $preview.innerHTML = marked.parse($editor.value);
+                $preview.innerHTML = marked.parse($editor.value, { breaks: true });
             } else {
                 $preview.innerHTML = '<p style="color:var(--color-text-secondary)">' + t('md_not_loaded') + '</p>';
             }

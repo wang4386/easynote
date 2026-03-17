@@ -459,6 +459,16 @@ function showNotePage($note, $note_file, $meta_file) {
 }
 
 /**
+ * Generate a versioned URL for a static asset (cache busting)
+ */
+function asset_url($path) {
+    global $base_url;
+    $file = __DIR__ . '/' . ltrim($path, '/');
+    $v = file_exists($file) ? filemtime($file) : time();
+    return $base_url . '/' . ltrim($path, '/') . '?v=' . $v;
+}
+
+/**
  * Build lang switch URL preserving current path
  */
 function langSwitchUrl($target_lang) {
@@ -522,7 +532,7 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false, $m
     @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
     <!-- Async load full stylesheet to maximize Lighthouse score -->
-    <link rel="preload" href="<?php echo $base; ?>/assets/css/style.css" as="style" id="mainStyle" onload="this.onload=null;this.rel='stylesheet';hideLoader();">
+    <link rel="preload" href="<?php echo asset_url('assets/css/style.css'); ?>" as="style" id="mainStyle" onload="this.onload=null;this.rel='stylesheet';hideLoader();">
     <script>
         function hideLoader() {
             var loader = document.getElementById('globalLoader');
@@ -540,7 +550,7 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false, $m
             window.addEventListener('load', hideLoader);
         }
     </script>
-    <noscript><style>main{opacity:1;}</style><link rel="stylesheet" href="<?php echo $base; ?>/assets/css/style.css"></noscript>
+    <noscript><style>main{opacity:1;}</style><link rel="stylesheet" href="<?php echo asset_url('assets/css/style.css'); ?>"></noscript>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
 </head>
 <body>
@@ -703,8 +713,8 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false, $m
     <!-- Toast -->
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     
-    <script src="<?php echo $base; ?>/assets/js/marked.min.js" defer></script>
-    <script src="<?php echo $base; ?>/assets/js/app.js" defer></script>
+    <script src="<?php echo asset_url('assets/js/marked.min.js'); ?>" defer></script>
+    <script src="<?php echo asset_url('assets/js/app.js'); ?>" defer></script>
     
     <?php endif; ?>
 </body>

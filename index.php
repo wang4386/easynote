@@ -96,7 +96,7 @@ showNotePage($note, $note_file, $meta_file);
  * Handle API requests for AI/programmatic access
  */
 function handleApiRequest($note, $note_file, $meta_file) {
-    global $cipher;
+    global $cipher, $data_dir;
     
     // CORS headers for API
     header('Access-Control-Allow-Origin: *');
@@ -124,6 +124,11 @@ function handleApiRequest($note, $note_file, $meta_file) {
             $content = $input;
             $password = isset($_SERVER['HTTP_X_PASSWORD']) ? $_SERVER['HTTP_X_PASSWORD'] : '';
         }
+        
+        // Security: content size limit
+        if (checkContentSize($content)) exit;
+        // Security: note count limit (new notes only)
+        if (checkNoteLimit($data_dir, $note_file)) exit;
         
         if (!empty($password)) {
             $content = encryptContent($content, $password);
@@ -174,8 +179,12 @@ function handleApiRequest($note, $note_file, $meta_file) {
             exit;
         }
         
+        // Security: brute force protection
+        if (checkBruteForce($note, $_SERVER['REMOTE_ADDR'])) exit;
+        
         $decrypted = decryptContent($content, $password);
         if ($decrypted === false) {
+            recordBruteForceAttempt($note, $_SERVER['REMOTE_ADDR']);
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(403);
             echo json_encode([
@@ -185,6 +194,7 @@ function handleApiRequest($note, $note_file, $meta_file) {
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        resetBruteForce($note, $_SERVER['REMOTE_ADDR']);
         $content = $decrypted;
     }
     
@@ -213,7 +223,7 @@ function handleApiRequest($note, $note_file, $meta_file) {
  * Handle AJAX save request from frontend
  */
 function handleSaveRequest($note, $note_file, $meta_file) {
-    global $cipher;
+    global $cipher, $data_dir;
     
     $input = file_get_contents('php://input');
     $json = json_decode($input, true);
@@ -243,6 +253,11 @@ function handleSaveRequest($note, $note_file, $meta_file) {
             $content = isset($json['content']) ? $json['content'] : '';
             $password = isset($json['password']) ? $json['password'] : '';
             
+            // Security: content size limit
+            if (checkContentSize($content)) break;
+            // Security: note count limit (new notes only)
+            if (checkNoteLimit($data_dir, $note_file)) break;
+            
             if (!empty($password)) {
                 $content = encryptContent($content, $password);
             }
@@ -267,11 +282,15 @@ function handleSaveRequest($note, $note_file, $meta_file) {
                 echo json_encode(['content' => $content, 'encrypted' => false], JSON_UNESCAPED_UNICODE);
                 break;
             }
+            // Security: brute force protection
+            if (checkBruteForce($note, $_SERVER['REMOTE_ADDR'])) break;
             $decrypted = decryptContent($content, $password);
             if ($decrypted === false) {
+                recordBruteForceAttempt($note, $_SERVER['REMOTE_ADDR']);
                 http_response_code(403);
                 echo json_encode(['error' => 'Invalid password'], JSON_UNESCAPED_UNICODE);
             } else {
+                resetBruteForce($note, $_SERVER['REMOTE_ADDR']);
                 echo json_encode(['content' => $decrypted, 'encrypted' => true], JSON_UNESCAPED_UNICODE);
             }
             break;
@@ -312,9 +331,13 @@ function handleSaveRequest($note, $note_file, $meta_file) {
                 echo json_encode(['status' => 'ok', 'readonly' => false], JSON_UNESCAPED_UNICODE);
                 break;
             }
+            // Security: brute force protection
+            if (checkBruteForce($note, $_SERVER['REMOTE_ADDR'])) break;
             if (password_verify($password, $meta['password_hash'])) {
+                resetBruteForce($note, $_SERVER['REMOTE_ADDR']);
                 echo json_encode(['status' => 'ok', 'verified' => true], JSON_UNESCAPED_UNICODE);
             } else {
+                recordBruteForceAttempt($note, $_SERVER['REMOTE_ADDR']);
                 http_response_code(403);
                 echo json_encode(['error' => 'Invalid password'], JSON_UNESCAPED_UNICODE);
             }
@@ -720,4 +743,104 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false, $m
 </body>
 </html>
 <?php
+}
+
+// ========== Security Helper Functions ==========
+
+/**
+ * Check content size against configured maximum.
+ * Returns true if blocked (caller should exit/break).
+ */
+function checkContentSize($content) {
+    global $max_note_size;
+    if (strlen($content) > $max_note_size) {
+        http_response_code(413);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'error' => 'Content too large. Max size: ' . round($max_note_size / 1024) . 'KB'
+        ], JSON_UNESCAPED_UNICODE);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Check if creating a new note would exceed the total limit.
+ * Returns true if blocked (caller should exit/break).
+ */
+function checkNoteLimit($data_dir, $note_file) {
+    global $max_notes;
+    if (!file_exists($note_file)) {
+        $count = count(glob($data_dir . '*.txt'));
+        if ($count >= $max_notes) {
+            http_response_code(507);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Note limit reached'], JSON_UNESCAPED_UNICODE);
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Brute force protection — check if IP+note is locked out.
+ * Returns true if blocked (caller should exit/break).
+ */
+function checkBruteForce($note, $ip) {
+    global $brute_force_max, $brute_force_lockout;
+    $lock_dir = sys_get_temp_dir() . '/easynote_locks/';
+    if (!is_dir($lock_dir)) @mkdir($lock_dir, 0755, true);
+    
+    $file = $lock_dir . md5($note . '_' . $ip) . '.json';
+    if (!file_exists($file)) return false;
+    
+    $data = json_decode(@file_get_contents($file), true);
+    if (!is_array($data)) return false;
+    
+    $now = time();
+    if (isset($data['last_attempt']) && ($now - $data['last_attempt']) > $brute_force_lockout) {
+        @unlink($file);
+        return false;
+    }
+    
+    if (isset($data['attempts']) && $data['attempts'] >= $brute_force_max) {
+        $remaining = $brute_force_lockout - ($now - $data['last_attempt']);
+        http_response_code(429);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Retry-After: ' . $remaining);
+        echo json_encode(['error' => 'Too many failed attempts. Try again in ' . ceil($remaining / 60) . ' minutes.'], JSON_UNESCAPED_UNICODE);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Record a failed password attempt.
+ */
+function recordBruteForceAttempt($note, $ip) {
+    global $brute_force_lockout;
+    $lock_dir = sys_get_temp_dir() . '/easynote_locks/';
+    if (!is_dir($lock_dir)) @mkdir($lock_dir, 0755, true);
+    
+    $file = $lock_dir . md5($note . '_' . $ip) . '.json';
+    $data = file_exists($file) ? json_decode(@file_get_contents($file), true) : [];
+    if (!is_array($data)) $data = [];
+    
+    $now = time();
+    if (isset($data['last_attempt']) && ($now - $data['last_attempt']) > $brute_force_lockout) {
+        $data = ['attempts' => 0];
+    }
+    
+    $data['attempts'] = (isset($data['attempts']) ? $data['attempts'] : 0) + 1;
+    $data['last_attempt'] = $now;
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+}
+
+/**
+ * Reset brute force counter on successful authentication.
+ */
+function resetBruteForce($note, $ip) {
+    $lock_dir = sys_get_temp_dir() . '/easynote_locks/';
+    $file = $lock_dir . md5($note . '_' . $ip) . '.json';
+    if (file_exists($file)) @unlink($file);
 }

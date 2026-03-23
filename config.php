@@ -27,3 +27,9 @@ $default_note = '';
 // Encryption cipher
 $cipher = 'aes-256-cbc';
 
+// === Security Settings ===
+$max_note_size = 512 * 1024;    // Max single note size (512 KB)
+$max_notes = 1000;              // Max total number of notes
+$brute_force_max = 5;           // Failed password attempts before lockout
+$brute_force_lockout = 900;     // Lockout duration in seconds (15 min)
+

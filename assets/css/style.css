@@ -414,8 +414,11 @@ body::before {
 .btn-lang {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 6px 14px;
+    height: 32px;
+    padding: 0 14px;
+    box-sizing: border-box;
     border-radius: 20px;
     background: var(--bg-base);
     box-shadow: var(--shadow-inset);
@@ -1525,9 +1528,16 @@ body::before {
 /* === Home page: full sky toggle, sized to match lang button === */
 .theme-toggle-wrap {
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 20px;
+    border: 1px solid transparent;
+    background: var(--bg-base);
+    box-shadow: var(--shadow-inset);
+    box-sizing: border-box;
 }
 
 .theme-toggle-home {
@@ -1540,6 +1550,7 @@ body::before {
     position: relative;
     width: 220px;
     height: 90px;
+    flex-shrink: 0;
     background:
         radial-gradient(circle at 18% 20px, #fff, #fff 6px, transparent 7px, transparent),
         radial-gradient(circle at 35% 45px, #fff, #fff 1px, transparent 2px, transparent),
@@ -1564,7 +1575,7 @@ body::before {
     overflow: hidden;
     transition: .5s all;
     transform: scale(0.355);
-    transform-origin: top left;
+    transform-origin: center;
 }
 
 .theme-toggle::before,
@@ -1738,6 +1749,19 @@ body::before {
     color: #1C1C1E;
 }
 
+/* Dark mode: improve markdown toggle contrast */
+[data-theme="dark"] #btnMarkdown {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #E5E5EA;
+}
+
+[data-theme="dark"] #btnMarkdown:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #F5F5F7;
+}
+
 [data-theme="dark"] .toast {
     background: #F5F5F7;
     color: #1C1C1E;
@@ -1813,6 +1837,13 @@ body,
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
+    .btn-lang {
+        height: 24px;
+        padding: 0 10px;
+        gap: 4px;
+        font-size: 11px;
+    }
+
     .theme-toggle-home {
         width: 57px;
         height: 24px;
@@ -1820,6 +1851,7 @@ body,
 
     .theme-toggle-home .theme-toggle {
         transform: scale(0.26);
+        transform-origin: center;
     }
 
     .btn-theme-editor {

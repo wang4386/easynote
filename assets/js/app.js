@@ -35,6 +35,167 @@
     var $readonlyBanner;
     var $encryptedBanner;
 
+    // === Lazy Loading Helpers ===
+    var _loadCache = {};
+    function loadScript(url) {
+        if (_loadCache[url]) return _loadCache[url];
+        _loadCache[url] = new Promise(function(resolve, reject) {
+            var s = document.createElement('script');
+            s.src = url;
+            s.onload = resolve;
+            s.onerror = function() { _loadCache[url] = null; reject(); };
+            document.head.appendChild(s);
+        });
+        return _loadCache[url];
+    }
+    function loadCSS(url) {
+        if (_loadCache[url]) return;
+        _loadCache[url] = true;
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url;
+        document.head.appendChild(link);
+    }
+
+    // === Content Detection ===
+    function contentNeedsMermaid(text) {
+        return /```mermaid/i.test(text);
+    }
+    function contentNeedsMath(text) {
+        return /\$\$[\s\S]+?\$\$|\$[^\$\s][^\$\n]*?\$/.test(text);
+    }
+
+    // === Asset URL helper ===
+    function assetUrl(path) {
+        return state.baseUrl + '/' + path;
+    }
+
+    // === KaTeX Extension Registration (one-time) ===
+    var katexExtRegistered = false;
+    function registerKatexExtensions() {
+        if (katexExtRegistered) return;
+        if (typeof marked === 'undefined' || typeof katex === 'undefined') return;
+        katexExtRegistered = true;
+
+        var blockMath = {
+            name: 'blockMath',
+            level: 'block',
+            start: function(src) { return src.indexOf('$$'); },
+            tokenizer: function(src) {
+                var match = src.match(/^\$\$([\s\S]+?)\$\$/);
+                if (match) {
+                    return { type: 'blockMath', raw: match[0], text: match[1].trim() };
+                }
+            },
+            renderer: function(token) {
+                try {
+                    return '<div class="katex-display-wrapper">' + katex.renderToString(token.text, { displayMode: true, throwOnError: false }) + '</div>';
+                } catch (e) {
+                    return '<div class="katex-error">' + token.text + '</div>';
+                }
+            }
+        };
+
+        var inlineMath = {
+            name: 'inlineMath',
+            level: 'inline',
+            start: function(src) { return src.indexOf('$'); },
+            tokenizer: function(src) {
+                var match = src.match(/^\$([^\$\n]+?)\$/);
+                if (match) {
+                    return { type: 'inlineMath', raw: match[0], text: match[1].trim() };
+                }
+            },
+            renderer: function(token) {
+                try {
+                    return katex.renderToString(token.text, { displayMode: false, throwOnError: false });
+                } catch (e) {
+                    return '<span class="katex-error">' + token.text + '</span>';
+                }
+            }
+        };
+
+        marked.use({ extensions: [blockMath, inlineMath] });
+    }
+
+    // === Mermaid Post-Processing (DOM-based, no custom renderer needed) ===
+    function postProcessMermaid() {
+        if (typeof mermaid === 'undefined') return Promise.resolve();
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: isDark ? 'dark' : 'default',
+            securityLevel: 'loose',
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+        });
+
+        // Find code blocks with language-mermaid and convert them to mermaid divs
+        var codeBlocks = $preview.querySelectorAll('pre code');
+        var mermaidDivs = [];
+        codeBlocks.forEach(function(codeEl) {
+            var cls = codeEl.className || '';
+            if (cls.indexOf('mermaid') !== -1 || cls.indexOf('language-mermaid') !== -1) {
+                var pre = codeEl.parentElement;
+                var div = document.createElement('div');
+                div.className = 'mermaid';
+                div.textContent = codeEl.textContent;
+                div.setAttribute('id', 'mermaid-' + Date.now() + '-' + mermaidDivs.length);
+                pre.parentNode.replaceChild(div, pre);
+                mermaidDivs.push(div);
+            }
+        });
+
+        if (mermaidDivs.length === 0) return Promise.resolve();
+
+        return mermaid.run({ nodes: mermaidDivs }).catch(function(e) {
+            console.warn('Mermaid render error:', e);
+        });
+    }
+
+    // === Unified Markdown Render (async, lazy-loads libs as needed) ===
+    function renderMarkdown(text) {
+        if (typeof marked === 'undefined') {
+            $preview.innerHTML = '<p style="color:var(--color-text-secondary)">' + t('md_not_loaded') + '</p>';
+            return;
+        }
+
+        var needMath = contentNeedsMath(text);
+        var needMermaid = contentNeedsMermaid(text);
+
+        // Phase 1: Load KaTeX if needed (must load BEFORE parsing)
+        var mathReady = Promise.resolve();
+        if (needMath && typeof katex === 'undefined') {
+            loadCSS(assetUrl('assets/css/katex.min.css'));
+            mathReady = loadScript(assetUrl('assets/js/katex.min.js')).then(function() {
+                registerKatexExtensions();
+            }).catch(function() {
+                console.warn('Failed to load KaTeX');
+            });
+        } else if (needMath) {
+            registerKatexExtensions();
+        }
+
+        mathReady.then(function() {
+            // Phase 2: Parse markdown
+            marked.use({ breaks: true });
+            $preview.innerHTML = marked.parse(text);
+            addCodeCopyButtons();
+
+            // Phase 3: Load Mermaid if needed (post-processing, AFTER parsing)
+            if (needMermaid) {
+                if (typeof mermaid === 'undefined') {
+                    loadScript(assetUrl('assets/js/mermaid.min.js')).then(function() {
+                        return postProcessMermaid();
+                    }).catch(function() {
+                        console.warn('Failed to load Mermaid');
+                    });
+                } else {
+                    postProcessMermaid();
+                }
+            }
+        });
+    }
+
     // === Initialize ===
     function init() {
         state.noteName = document.getElementById('noteName').value;
@@ -87,10 +248,7 @@
         if (state.isMarkdown && !state.isEncrypted) {
             state.markdownMode = true;
             $btnMarkdown.classList.add('active');
-            if (typeof marked !== 'undefined') {
-                $preview.innerHTML = marked.parse($editor.value, { breaks: true });
-                addCodeCopyButtons();
-            }
+            renderMarkdown($editor.value);
             $editor.style.display = 'none';
             $preview.style.display = 'block';
         }
@@ -271,12 +429,7 @@
         $btnMarkdown.classList.toggle('active', state.markdownMode);
 
         if (state.markdownMode) {
-            if (typeof marked !== 'undefined') {
-                $preview.innerHTML = marked.parse($editor.value, { breaks: true });
-                addCodeCopyButtons();
-            } else {
-                $preview.innerHTML = '<p style="color:var(--color-text-secondary)">' + t('md_not_loaded') + '</p>';
-            }
+            renderMarkdown($editor.value);
             $editor.style.display = 'none';
             $preview.style.display = 'block';
         } else {
@@ -577,10 +730,7 @@
                             if (state.isMarkdown) {
                                 state.markdownMode = true;
                                 $btnMarkdown.classList.add('active');
-                                if (typeof marked !== 'undefined') {
-                                    $preview.innerHTML = marked.parse($editor.value, { breaks: true });
-                                    addCodeCopyButtons();
-                                }
+                                renderMarkdown($editor.value);
                                 $editor.style.display = 'none';
                                 $preview.style.display = 'block';
                             } else {

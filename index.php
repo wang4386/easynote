@@ -568,6 +568,7 @@ function renderPage($note, $content, $encrypted, $is_home, $readonly = false, $m
     </style>
     <!-- Async load full stylesheet to maximize Lighthouse score -->
     <link rel="preload" href="<?php echo asset_url('assets/css/style.css'); ?>" as="style" id="mainStyle" onload="this.onload=null;this.rel='stylesheet';hideLoader();">
+
     <script>
         function hideLoader() {
             var loader = document.getElementById('globalLoader');

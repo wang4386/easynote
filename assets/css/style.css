@@ -1135,6 +1135,55 @@ body::before {
     margin: 32px 0;
 }
 
+/* --- Mermaid Diagrams --- */
+.markdown-preview .mermaid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+    padding: 24px 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-outer);
+    overflow-x: auto;
+}
+
+.markdown-preview .mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+[data-theme="dark"] .markdown-preview .mermaid {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(68, 68, 70, 0.4);
+}
+
+/* --- KaTeX Math Formulas --- */
+.markdown-preview .katex-display-wrapper {
+    margin: 20px 0;
+    padding: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    text-align: center;
+}
+
+.markdown-preview .katex-display-wrapper .katex-display {
+    margin: 0;
+}
+
+.markdown-preview .katex {
+    font-size: 1.1em;
+}
+
+.markdown-preview .katex-error {
+    color: var(--color-danger);
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.85em;
+    padding: 4px 8px;
+    background: rgba(255, 59, 48, 0.06);
+    border-radius: 4px;
+}
+
 /* --- Definition Lists --- */
 .markdown-preview dl {
     margin: 0 0 16px;

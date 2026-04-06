@@ -399,6 +399,15 @@ body::before {
     border-color: var(--color-primary);
 }
 
+/* Dark mode: no border when inactive, visible border when active */
+[data-theme="dark"] .btn-icon {
+    border-color: transparent;
+}
+
+[data-theme="dark"] .btn-icon.active {
+    border-color: var(--color-primary);
+}
+
 /* === Language Toggle Button (Home) === */
 /* Home page actions bar */
 .home-actions {
@@ -1749,17 +1758,23 @@ body::before {
     color: #1C1C1E;
 }
 
-/* Dark mode: improve markdown toggle contrast */
+/* Dark mode: markdown toggle — no border/bg when inactive, visible when active */
 [data-theme="dark"] #btnMarkdown {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: transparent;
+    border-color: transparent;
     color: #E5E5EA;
 }
 
 [data-theme="dark"] #btnMarkdown:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: transparent;
     color: #F5F5F7;
+}
+
+[data-theme="dark"] #btnMarkdown.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #1C1C1E;
 }
 
 [data-theme="dark"] .toast {

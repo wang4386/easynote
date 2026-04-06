@@ -1547,6 +1547,12 @@ body::before {
     background: var(--bg-base);
     box-shadow: var(--shadow-inset);
     box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .theme-toggle-home {

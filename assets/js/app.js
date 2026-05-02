@@ -126,7 +126,74 @@
             startOnLoad: false,
             theme: isDark ? 'dark' : 'default',
             securityLevel: 'loose',
-            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+            themeVariables: isDark ? {
+                // Global dark mode variables
+                darkMode: true,
+                background: '#1c1c1e',
+                primaryColor: '#3a3a3c',
+                primaryTextColor: '#e0e0e0',
+                primaryBorderColor: '#636366',
+                secondaryColor: '#2c2c2e',
+                secondaryTextColor: '#d1d1d6',
+                tertiaryColor: '#48484a',
+                lineColor: '#8e8e93',
+                textColor: '#e0e0e0',
+                mainBkg: '#3a3a3c',
+                nodeBorder: '#636366',
+                // Flowchart / Graph
+                clusterBkg: '#2c2c2e',
+                clusterBorder: '#48484a',
+                edgeLabelBackground: '#2c2c2e',
+                // Sequence diagram
+                actorBkg: '#3a3a3c',
+                actorBorder: '#636366',
+                actorTextColor: '#e0e0e0',
+                actorLineColor: '#636366',
+                signalColor: '#e0e0e0',
+                signalTextColor: '#e0e0e0',
+                labelBoxBkgColor: '#2c2c2e',
+                labelBoxBorderColor: '#636366',
+                labelTextColor: '#e0e0e0',
+                loopTextColor: '#e0e0e0',
+                activationBorderColor: '#636366',
+                activationBkgColor: '#48484a',
+                sequenceNumberColor: '#e0e0e0',
+                // Gantt
+                sectionBkgColor: '#2c2c2e',
+                sectionBkgColor2: '#3a3a3c',
+                altSectionBkgColor: '#2c2c2e',
+                gridColor: '#48484a',
+                taskBorderColor: '#636366',
+                taskBkgColor: '#5856D6',
+                activeTaskBkgColor: '#FF453A',
+                activeTaskBorderColor: '#FF6961',
+                doneTaskBkgColor: '#48484a',
+                doneTaskBorderColor: '#636366',
+                critBkgColor: '#FF453A',
+                critBorderColor: '#FF6961',
+                taskTextColor: '#e0e0e0',
+                taskTextOutsideColor: '#e0e0e0',
+                taskTextClickableColor: '#64D2FF',
+                // ER Diagram
+                entityBorder: '#636366',
+                entityBkg: '#3a3a3c',
+                attributeBackgroundColorOdd: '#2c2c2e',
+                attributeBackgroundColorEven: '#333336',
+                // Mindmap
+                nodeBkg: '#3a3a3c'
+            } : {},
+            gantt: {
+                useWidth: 1200,
+                barHeight: 24,
+                barGap: 6,
+                topPadding: 60,
+                sidePadding: 100,
+                gridLineStartPadding: 50,
+                fontSize: 12,
+                numberSectionStyles: 4,
+                axisFormat: '%m-%d'
+            }
         });
 
         // Find code blocks with language-mermaid and convert them to mermaid divs
@@ -147,7 +214,20 @@
 
         if (mermaidDivs.length === 0) return Promise.resolve();
 
-        return mermaid.run({ nodes: mermaidDivs }).catch(function(e) {
+        return mermaid.run({ nodes: mermaidDivs }).then(function() {
+            // Tag gantt chart containers for CSS width override
+            mermaidDivs.forEach(function(div) {
+                var svg = div.querySelector('svg');
+                if (!svg) return;
+                // Mermaid gantt charts have aria-roledescription="gantt" or contain .grid/.section0 elements
+                var isGantt = svg.getAttribute('aria-roledescription') === 'gantt'
+                    || svg.querySelector('.section0')
+                    || svg.querySelector('.grid');
+                if (isGantt) {
+                    div.classList.add('mermaid-gantt');
+                }
+            });
+        }).catch(function(e) {
             console.warn('Mermaid render error:', e);
         });
     }
@@ -849,6 +929,18 @@
                 localStorage.setItem('easynote_theme', 'dark');
                 var m = document.getElementById('metaThemeColor');
                 if (m) m.setAttribute('content', '#1C1C1E');
+            }
+
+            // Re-render markdown preview if active (mermaid diagrams need re-init for theme)
+            if (state.markdownMode && $editor && $preview && $preview.style.display !== 'none') {
+                var scrollY = window.scrollY || window.pageYOffset;
+                var previewScroll = $preview.scrollTop;
+                renderMarkdown($editor.value);
+                // Restore scroll position after DOM update
+                requestAnimationFrame(function() {
+                    window.scrollTo(0, scrollY);
+                    $preview.scrollTop = previewScroll;
+                });
             }
         });
     })();

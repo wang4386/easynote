@@ -1153,9 +1153,232 @@ body::before {
     height: auto;
 }
 
+/* Gantt chart: allow wider SVG with horizontal scroll */
+.markdown-preview .mermaid.mermaid-gantt {
+    justify-content: flex-start;
+}
+.markdown-preview .mermaid.mermaid-gantt svg {
+    max-width: none;
+    min-width: 900px;
+}
+
+/* Gantt: fix date label font size */
+.markdown-preview .mermaid .grid .tick text {
+    font-size: 11px;
+}
+
+/* Dark mode: container */
 [data-theme="dark"] .markdown-preview .mermaid {
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(68, 68, 70, 0.4);
+}
+
+/* ===== GLOBAL TEXT: ensure all SVG text is light in dark mode ===== */
+[data-theme="dark"] .markdown-preview .mermaid text,
+[data-theme="dark"] .markdown-preview .mermaid tspan,
+[data-theme="dark"] .markdown-preview .mermaid .nodeLabel,
+[data-theme="dark"] .markdown-preview .mermaid .label,
+[data-theme="dark"] .markdown-preview .mermaid .edgeLabel,
+[data-theme="dark"] .markdown-preview .mermaid .cluster-label {
+    fill: #e0e0e0 !important;
+    color: #e0e0e0 !important;
+}
+
+/* ===== GLOBAL LINES: arrows and edges ===== */
+[data-theme="dark"] .markdown-preview .mermaid .edgePath .path,
+[data-theme="dark"] .markdown-preview .mermaid .flowchart-link {
+    stroke: #8e8e93 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid marker path {
+    fill: #8e8e93 !important;
+}
+
+/* ===== FLOWCHART / GRAPH ===== */
+[data-theme="dark"] .markdown-preview .mermaid .node rect,
+[data-theme="dark"] .markdown-preview .mermaid .node polygon,
+[data-theme="dark"] .markdown-preview .mermaid .node circle,
+[data-theme="dark"] .markdown-preview .mermaid .node ellipse,
+[data-theme="dark"] .markdown-preview .mermaid .node .label-container {
+    fill: #3a3a3c !important;
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .node .nodeLabel {
+    color: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .cluster rect {
+    fill: #2c2c2e !important;
+    stroke: #48484a !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .cluster-label .nodeLabel {
+    color: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .edgeLabel rect {
+    fill: #2c2c2e !important;
+    opacity: 0.9 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .edgeLabel span {
+    color: #d1d1d6 !important;
+    background: #2c2c2e !important;
+}
+
+/* ===== ER DIAGRAM ===== */
+/* Entity header box */
+[data-theme="dark"] .markdown-preview .mermaid .entityBox,
+[data-theme="dark"] .markdown-preview .mermaid .er.entityBox,
+[data-theme="dark"] .markdown-preview .mermaid rect.er.entityBox {
+    fill: #3a3a3c !important;
+    stroke: #636366 !important;
+}
+/* Entity name text */
+[data-theme="dark"] .markdown-preview .mermaid .entityLabel,
+[data-theme="dark"] .markdown-preview .mermaid .er.entityLabel,
+[data-theme="dark"] .markdown-preview .mermaid text.er.entityLabel {
+    fill: #ffffff !important;
+    font-weight: 600 !important;
+}
+/* Attribute rows */
+[data-theme="dark"] .markdown-preview .mermaid .attributeBoxOdd,
+[data-theme="dark"] .markdown-preview .mermaid .er.attributeBoxOdd,
+[data-theme="dark"] .markdown-preview .mermaid rect.er.attributeBoxOdd {
+    fill: #2a2a2c !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .attributeBoxEven,
+[data-theme="dark"] .markdown-preview .mermaid .er.attributeBoxEven,
+[data-theme="dark"] .markdown-preview .mermaid rect.er.attributeBoxEven {
+    fill: #333336 !important;
+}
+/* Attribute text */
+[data-theme="dark"] .markdown-preview .mermaid .attributeLabel,
+[data-theme="dark"] .markdown-preview .mermaid .er.attributeLabel,
+[data-theme="dark"] .markdown-preview .mermaid text.er.attributeLabel {
+    fill: #d1d1d6 !important;
+}
+/* Relationship lines and labels */
+[data-theme="dark"] .markdown-preview .mermaid .er.relationshipLine,
+[data-theme="dark"] .markdown-preview .mermaid .relationshipLine {
+    stroke: #8e8e93 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .er.relationshipLabel,
+[data-theme="dark"] .markdown-preview .mermaid .relationshipLabel {
+    fill: #aeaeb2 !important;
+}
+
+/* ===== SEQUENCE DIAGRAM ===== */
+[data-theme="dark"] .markdown-preview .mermaid .actor {
+    fill: #3a3a3c !important;
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid text.actor > tspan {
+    fill: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .actor-line {
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .messageLine0,
+[data-theme="dark"] .markdown-preview .mermaid .messageLine1 {
+    stroke: #8e8e93 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .messageText {
+    fill: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .activation0,
+[data-theme="dark"] .markdown-preview .mermaid .activation1,
+[data-theme="dark"] .markdown-preview .mermaid .activation2 {
+    fill: #48484a !important;
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .loopText,
+[data-theme="dark"] .markdown-preview .mermaid .loopText tspan {
+    fill: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .labelText,
+[data-theme="dark"] .markdown-preview .mermaid .labelText tspan {
+    fill: #e0e0e0 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .loopLine {
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid rect.note,
+[data-theme="dark"] .markdown-preview .mermaid .note rect {
+    fill: #3a3a3c !important;
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .noteText,
+[data-theme="dark"] .markdown-preview .mermaid .noteText tspan {
+    fill: #e0e0e0 !important;
+}
+/* Sequence: rect backgrounds for labels */
+[data-theme="dark"] .markdown-preview .mermaid .labelBox {
+    fill: #2c2c2e !important;
+    stroke: #636366 !important;
+}
+
+/* ===== GANTT CHART ===== */
+/* Title */
+[data-theme="dark"] .markdown-preview .mermaid .titleText {
+    fill: #e0e0e0 !important;
+}
+/* Grid */
+[data-theme="dark"] .markdown-preview .mermaid .grid .tick line {
+    stroke: #48484a !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .grid .tick text {
+    fill: #aeaeb2 !important;
+}
+/* Section backgrounds */
+[data-theme="dark"] .markdown-preview .mermaid .section0 {
+    fill: #2c2c2e !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .section1 {
+    fill: #333336 !important;
+}
+/* Section titles (left labels) */
+[data-theme="dark"] .markdown-preview .mermaid .sectionTitle,
+[data-theme="dark"] .markdown-preview .mermaid .sectionTitle0,
+[data-theme="dark"] .markdown-preview .mermaid .sectionTitle1,
+[data-theme="dark"] .markdown-preview .mermaid .sectionTitle2,
+[data-theme="dark"] .markdown-preview .mermaid .sectionTitle3 {
+    fill: #e0e0e0 !important;
+}
+/* Task text (on bars and outside) */
+[data-theme="dark"] .markdown-preview .mermaid .taskText,
+[data-theme="dark"] .markdown-preview .mermaid .taskText0,
+[data-theme="dark"] .markdown-preview .mermaid .taskText1,
+[data-theme="dark"] .markdown-preview .mermaid .taskText2,
+[data-theme="dark"] .markdown-preview .mermaid .taskText3 {
+    fill: #ffffff !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutside0,
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutside1,
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutside2,
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutside3,
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutsideRight,
+[data-theme="dark"] .markdown-preview .mermaid .taskTextOutsideLeft {
+    fill: #e0e0e0 !important;
+}
+/* Gantt domain axis line */
+[data-theme="dark"] .markdown-preview .mermaid .domain {
+    stroke: #636366 !important;
+}
+/* Today marker */
+[data-theme="dark"] .markdown-preview .mermaid .today {
+    stroke: #FF9F0A !important;
+}
+
+/* ===== MINDMAP ===== */
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node rect,
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node circle,
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node ellipse,
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node polygon,
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node path {
+    stroke: #636366 !important;
+}
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-node .nodeLabel {
+    color: #e0e0e0 !important;
+}
+/* Mindmap edge lines */
+[data-theme="dark"] .markdown-preview .mermaid .mindmap-edge {
+    stroke: #8e8e93 !important;
 }
 
 /* --- KaTeX Math Formulas --- */
